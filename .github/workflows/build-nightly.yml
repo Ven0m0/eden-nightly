@@ -256,9 +256,7 @@ jobs:
       TOOLCHAIN: ${{ matrix.toolchain }}
       ARCH: ${{ matrix.arch }}
       OPTIMIZE: ${{ matrix.optimize }}
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_COMPILERCHECK: content
-      CCACHE_SLOPPINESS: time_macros
+      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@v6.0.1
 
@@ -277,7 +275,7 @@ jobs:
           cache: false
           install: autoconf automake-wrapper automake autoconf-archive base-devel git libtool make p7zip zip unzip
           pacboy: >-
-            boost:p ccache:p clang:p cmake:p enet:p glslang:p libusb:p lld:p llvm:p lz4:p mbedtls:p ninja:p nlohmann-json:p 
+            boost:p sccache:p clang:p cmake:p enet:p fmt:p glslang:p libusb:p lld:p llvm:p lz4:p mbedtls:p ninja:p nlohmann-json:p 
             opus:p qt6-tools:p qt6-translations:p qt6-svg:p qt6-static:p rapidjson:p toolchain:p python-pip:p vulkan-memory-allocator:p vulkan-devel:p zlib:p zstd:p
             jbigkit:p xz:p libdeflate:p bzip2:p lerc:p graphite2:p crt-git:p libwebp:p libtiff:p brotli:p
 
@@ -293,34 +291,24 @@ jobs:
         shell: powershell
         run: |
           ./install-vulkan-sdk.ps1
-          
-      - name: Install ccache
-        if: ${{ matrix.toolchain != 'msys2' && matrix.optimize == 'normal' }}
-        shell: bash
-        run: |
-          choco install ccache -y --no-progress
-          
+
+      - name: Install sccache
+        if: ${{ matrix.optimize == 'normal' }}
+        uses: Eden-CI/sccache-action@v0.0.1
+        with:
+          disable_annotations: true 
+
       - name: Install LLVM
         if: ${{ matrix.toolchain != 'msys2' && matrix.toolchain == 'clang' }}
         shell: powershell
         run: |
           ./install-llvm.ps1
-          
+
       - name: Clone Eden
         run: |
           git clone 'https://git.eden-emu.dev/eden-emu/eden.git' ./eden
           cd ./eden
           echo "VERSION=$(git rev-list --count HEAD)" >> "${GITHUB_ENV}"
-
-      - name: Restore ccache
-        if: ${{ matrix.optimize == 'normal' }}
-        uses: actions/cache/restore@v4
-        id: restore-ccache-windows
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-ccache-${{ matrix.toolchain }}-${{ matrix.arch }}-${{ github.run_id }}
-          restore-keys: |
-            ${{ runner.os }}-ccache-${{ matrix.toolchain }}-${{ matrix.arch }}-
 
       - name: Compile Eden Windows
         run: |
@@ -341,13 +329,6 @@ jobs:
           makensis /DPRODUCT_TOOLCHAIN=%TOOLCHAIN% /DPRODUCT_VARIANT=%ARCH% /DPRODUCT_VERSION=%VERSION% eden.nsi
           mkdir artifacts 2>nul
           move /y *.exe artifacts\
-
-      - name: Save ccache
-        if: ${{ matrix.optimize == 'normal' && github.ref_name == 'main' }}
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ${{ steps.restore-ccache-windows.outputs.cache-primary-key }}
 
       - name: Upload Eden 7z
         uses: actions/upload-artifact@v5.0.0
