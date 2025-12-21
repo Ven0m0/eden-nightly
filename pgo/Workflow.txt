@@ -1,24 +1,14 @@
-Eden PGO made with 227a007413(Eden Nighty 28012)
+Eden Nightly(28109) - Eden Master df3b9400a6
 
-TOTK Benchmark 10m
-TOTK Benchmark 1h5m
-TOTK Gameplay 31m
-FF7 12m
-DTD 15m
-MK8D 20m
-AOC 12m
-HADES II 12m
-LM3 5m
-LM3 34m
-OUA Katamari 12m
-SM3DW 11m
-M.Wonder 12
-M Odyssey 5m
-M. Jamboree 6m
-Tetris Effect 8m
-THPS1+2 10m
-THPS3+4 6m
-M. Odyssey 11m
-XBC3 10m
-BOTW 11m
-TOTK Gameplay 23m
+TOTK Benchmark 34m
+MK8D 21m
+MP4 14m
+THPS12 8m
+THPS12 9m
+MP4 - VoltForge 7m
+PokeLZA 14m
+TOTK Benchmark 33m
+FF7CC 7m
+DTD 10m
+FL 6m
+TOTK Gameplay 7m
