@@ -8,7 +8,6 @@ echo "---------------------------------------------------------------"
 pacman -Syu --noconfirm \
 	base-devel \
 	catch2 \
-	ccache \
 	clang \
 	cmake \
 	gamemode \

@@ -128,7 +128,7 @@ echo "-- Build Completed."
 
 echo "-- Sccache stats:"
 if [[ "${OPTIMIZE}" == "normal" ]]; then
-    sccache --show-stats
+    sccache -s
 fi
 
 # Gather dependencies

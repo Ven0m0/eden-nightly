@@ -37,8 +37,8 @@ fi
 
 # Set extra cmake flags
 CMAKE_FLAGS=(
-    "-DCMAKE_C_COMPILER_LAUNCHER=ccache"
-    "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+    "-DCMAKE_C_COMPILER_LAUNCHER=sccache"
+    "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
     "-DENABLE_UPDATE_CHECKER=ON"
 )
 
@@ -68,8 +68,8 @@ cd src/android
 chmod +x ./gradlew
 ./gradlew "assemble${FLAVOR}Release" -PYUZU_ANDROID_ARGS="${CMAKE_FLAGS[*]}"
 
-echo "-- Ccache stats:"
-ccache -s -v
+echo "-- Sccache stats:"
+sccache -s
 
 APK_PATH=$(find app/build/outputs/apk -type f -name "*.apk" | head -n 1)
 echo "-- Found APK at: $APK_PATH"

@@ -1,4 +1,5 @@
 name: Build
+run-name: Build ${{ github.event.inputs.job_to_run }}
 
 concurrency:
   group: build-eden-${{ github.ref }}-${{ github.event.inputs.job_to_run || 'all' }}
@@ -114,9 +115,7 @@ jobs:
     env:
       TARGET: ${{ matrix.target }}
       OPTIMIZE: ${{ matrix.optimize }}
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_COMPILERCHECK: content
-      CCACHE_SLOPPINESS: time_macros
+      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@v6.0.1
         with:
@@ -126,32 +125,21 @@ jobs:
         run: |
           chmod +x ./linux-dependencies.sh
           ./linux-dependencies.sh
-          
+
+      - name: Install sccache
+        if: ${{ matrix.optimize == 'Normal' }}
+        uses: Eden-CI/sccache-action@v0.0.1
+        with:
+          disable_annotations: true
+
       - name: Clone Eden
         run: |
           git clone 'https://git.eden-emu.dev/eden-emu/eden.git' ./eden
-
-      - name: Restore ccache for ${{ matrix.target }}
-        if: ${{ matrix.optimize == 'Normal'}}
-        uses: actions/cache/restore@v5
-        id: restore-ccache-appimage
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-ccache-${{ matrix.target }}-${{ github.run_id }}
-          restore-keys: |
-            ${{ runner.os }}-ccache-${{ matrix.target }}-
 
       - name: Compile Eden ${{ matrix.target }}
         run: |
           chmod +x ./eden-appimage.sh
           ./eden-appimage.sh
-
-      - name: Save ccache for ${{ matrix.target }}
-        if: ${{ matrix.optimize == 'Normal' && github.ref_name == 'main' }}
-        uses: actions/cache/save@v5
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ${{ steps.restore-ccache-appimage.outputs.cache-primary-key }}
 
       - name: Upload appimage
         uses: actions/upload-artifact@v6.0.0
@@ -175,41 +163,28 @@ jobs:
     name: "Android (${{ matrix.target }})"
     env:
       TARGET: ${{ matrix.target }}
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_COMPILERCHECK: content
-      CCACHE_SLOPPINESS: time_macros
+      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@v6.0.1
 
       - name: Install dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install ccache glslang-tools libvulkan-dev python3-requests -y
+          sudo apt-get install glslang-tools libvulkan-dev python3-requests -y
+
+      - name: Install sccache
+        uses: Eden-CI/sccache-action@v0.0.1
+        with:
+          disable_annotations: true
 
       - name: Clone Eden
         run: |
           git clone 'https://git.eden-emu.dev/eden-emu/eden.git' ./eden
 
-      - name: Restore ccache for ${{ matrix.target }}
-        uses: actions/cache/restore@v5
-        id: restore-ccache-cache
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-android-ccache-${{ matrix.target }}-${{ github.run_id }}
-          restore-keys: |
-            ${{ runner.os }}-android-ccache-${{ matrix.target }}-
-
       - name: Compile Eden android
         run: |
           chmod +x ./eden-android.sh
           ./eden-android.sh
-
-      - name: Save ccache for ${{ matrix.target }}
-        if: ${{ github.ref_name == 'main' }}
-        uses: actions/cache/save@v5
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ${{ steps.restore-ccache-cache.outputs.cache-primary-key }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6.0.0
@@ -296,7 +271,7 @@ jobs:
         if: ${{ matrix.optimize == 'normal' }}
         uses: Eden-CI/sccache-action@v0.0.1
         with:
-          disable_annotations: true 
+          disable_annotations: true
 
       - name: Install LLVM
         if: ${{ matrix.toolchain != 'msys2' && matrix.toolchain == 'clang' }}
@@ -351,9 +326,7 @@ jobs:
         target: [arm64]
     env:
       TARGET: ${{ matrix.target }}
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_COMPILERCHECK: content
-      CCACHE_SLOPPINESS: time_macros
+      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@v6
 
@@ -361,18 +334,14 @@ jobs:
         run: |
           git clone 'https://git.eden-emu.dev/eden-emu/eden.git' ./eden
 
-      - name: Restore ccache for ${{ matrix.target }}
-        uses: actions/cache/restore@v5
-        id: restore-ccache-cache
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-${{ matrix.target }}-ccache-${{ github.run_id }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.target }}-ccache-
-
       - name: Install dependencies
         run: |
-          brew install --formula --quiet autoconf automake boost ccache glslang hidapi libiconv libtool mbedtls nasm speexdsp vulkan-loader vulkan-headers vulkan-utility-libraries molten-vk
+          brew install --formula --quiet autoconf automake boost sccache glslang hidapi libiconv libtool mbedtls nasm speexdsp vulkan-loader vulkan-headers vulkan-utility-libraries molten-vk
+
+      - name: Install sccache
+        uses: Eden-CI/sccache-action@v0.0.1
+        with:
+          disable_annotations: true
 
       - name: Install Qt
         run: |
@@ -392,13 +361,6 @@ jobs:
         with:
           name: eden-macos-${{ matrix.target }}
           path: eden/build/artifacts/
-
-      - name: Save ccache for ${{ matrix.target }}
-        if: ${{ github.ref_name == 'main' }}
-        uses: actions/cache/save@v5
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ${{ steps.restore-ccache-cache.outputs.cache-primary-key }}
 
   bsd:
     if: github.event.inputs.job_to_run == 'all' || github.event.inputs.job_to_run == 'bsd'

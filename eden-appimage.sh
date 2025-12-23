@@ -74,8 +74,8 @@ case "$TARGET" in
             EXTRA_CMAKE_FLAGS+=(
                 "-DCMAKE_C_COMPILER=gcc"
                 "-DCMAKE_CXX_COMPILER=g++"
-                "-DCMAKE_C_COMPILER_LAUNCHER=ccache"
-                "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+                "-DCMAKE_C_COMPILER_LAUNCHER=sccache"
+                "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
                 "-DCMAKE_C_FLAGS=-march=znver2 -mtune=znver2 -Ofast -pipe -flto=auto -fuse-ld=mold -w"
                 "-DCMAKE_CXX_FLAGS=-march=znver2 -mtune=znver2 -Ofast -pipe -flto=auto -fuse-ld=mold -w"
             )
@@ -99,8 +99,8 @@ case "$TARGET" in
             EXTRA_CMAKE_FLAGS+=(
                 "-DCMAKE_C_COMPILER=gcc"
                 "-DCMAKE_CXX_COMPILER=g++"
-                "-DCMAKE_C_COMPILER_LAUNCHER=ccache"
-                "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+                "-DCMAKE_C_COMPILER_LAUNCHER=sccache"
+                "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
                 "-DCMAKE_C_FLAGS=-march=znver4 -mtune=znver4 -Ofast -pipe -flto=auto -fuse-ld=mold -w"
                 "-DCMAKE_CXX_FLAGS=-march=znver4 -mtune=znver4 -Ofast -pipe -flto=auto -fuse-ld=mold -w"
             )
@@ -124,8 +124,8 @@ case "$TARGET" in
             EXTRA_CMAKE_FLAGS+=(
                 "-DCMAKE_C_COMPILER=gcc"
                 "-DCMAKE_CXX_COMPILER=g++"
-                "-DCMAKE_C_COMPILER_LAUNCHER=ccache"
-                "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+                "-DCMAKE_C_COMPILER_LAUNCHER=sccache"
+                "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
                 "-DCMAKE_C_FLAGS=-march=x86-64-v3 -Ofast -pipe -flto=auto -fuse-ld=mold -w"
                 "-DCMAKE_CXX_FLAGS=-march=x86-64-v3 -Ofast -pipe -flto=auto -fuse-ld=mold -w"
             )
@@ -149,8 +149,8 @@ case "$TARGET" in
             EXTRA_CMAKE_FLAGS+=(
                 "-DCMAKE_C_COMPILER=gcc"
                 "-DCMAKE_CXX_COMPILER=g++"
-                "-DCMAKE_C_COMPILER_LAUNCHER=ccache"
-                "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+                "-DCMAKE_C_COMPILER_LAUNCHER=sccache"
+                "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
                 "-DCMAKE_C_FLAGS=-march=x86-64 -mtune=generic -O2 -pipe -flto=auto -fuse-ld=mold -w"
                 "-DCMAKE_CXX_FLAGS=-march=x86-64 -mtune=generic -O2 -pipe -flto=auto -fuse-ld=mold -w"
             )
@@ -163,8 +163,8 @@ case "$TARGET" in
             "-DYUZU_USE_BUNDLED_SDL2=ON"
             "-DCMAKE_C_COMPILER=gcc"
             "-DCMAKE_CXX_COMPILER=g++"
-            "-DCMAKE_C_COMPILER_LAUNCHER=ccache"
-            "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+            "-DCMAKE_C_COMPILER_LAUNCHER=sccache"
+            "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache"
             "-DCMAKE_CXX_FLAGS=-march=armv8-a -mtune=generic -Ofast -pipe -flto=auto -fuse-ld=mold -w"
             "-DCMAKE_C_FLAGS=-march=armv8-a -mtune=generic -Ofast -pipe -flto=auto -fuse-ld=mold -w"
         )
@@ -188,9 +188,9 @@ cmake .. -G Ninja "${BASE_CMAKE_FLAGS[@]}" "${EXTRA_CMAKE_FLAGS[@]}"
 ninja
 echo "-- Build Completed."
 
-echo "-- Ccache stats:"
 if [[ "$OPTIMIZE" == "Normal" ]]; then
-    ccache -s -v
+    echo "-- Sccache stats:"
+    sccache -s
 fi
 
 # Use sharun to generate AppDir

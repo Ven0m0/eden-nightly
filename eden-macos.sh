@@ -38,14 +38,14 @@ cmake .. -GNinja \
     -DYUZU_ROOM_STANDALONE=OFF \
     -DCMAKE_CXX_FLAGS="-w" \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+    -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
     -DCMAKE_PREFIX_PATH=${GITHUB_WORKSPACE}/Qt/6.7.3/lib/cmake
 ninja
 echo "-- Build Completed."
 
 echo "-- Build stats:"
-ccache -s -v
+sccache -s
 
 # Bundle and code-sign eden.app
 echo "-- Code-signing Eden.app..."
