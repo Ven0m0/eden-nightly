@@ -1,4 +1,6 @@
 #!/bin/sh
+# shellcheck enable=all shell=sh source-path=SCRIPTDIR
+LC_ALL=C
 set -ex
 
 case "$TARGET" in
