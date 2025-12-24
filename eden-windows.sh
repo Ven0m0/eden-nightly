@@ -41,6 +41,12 @@ if [[ "$ARCH" == "arm64" ]]; then
     echo "   Done."
 fi
 
+# Optimize PNG assets
+echo "-- Optimizing PNG assets..."
+chmod +x ../optimize-assets.sh
+../optimize-assets.sh || echo "   Warning: optimize-assets.sh failed or optipng not available"
+echo "   Done."
+
 # Set Base CMake flags
 declare -a BASE_CMAKE_FLAGS=(
     "-DBUILD_TESTING=OFF"

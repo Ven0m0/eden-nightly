@@ -30,6 +30,13 @@ echo "   Count: $COUNT"
 echo "-- Applying updater patch..."
 git apply ../patches/update.patch
 echo "   Done."
+
+# Optimize PNG assets
+echo "-- Optimizing PNG assets..."
+chmod +x ../optimize-assets.sh
+../optimize-assets.sh || echo "   Warning: optimize-assets.sh failed or optipng not available"
+echo "   Done."
+
 # Set Base CMake flags
 declare -a BASE_CMAKE_FLAGS=(
     "-DYUZU_USE_BUNDLED_QT=OFF"
