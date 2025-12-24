@@ -9,24 +9,21 @@ cmake --fresh -G Ninja -S . -B build \
 -DYUZU_SYSTEM_PROFILE=steamdeck \
 -DYUZU_USE_EXTERNAL_SDL2=ON \
 -DYUZU_USE_CPM=ON \
--DYUZU_USE_FASTER_LD=OFF \
--DBUILD_TESTING=OFF \
--DYUZU_TESTS=OFF \
--DDYNARMIC_TESTS=OFF \
+-DYUZU_USE_FASTER_LD=ON \
+-DBUILD_TESTING=OFF -DYUZU_TESTS=OFF -DDYNARMIC_TESTS=OFF \
 -DYUZU_CMD=OFF \
 -DYUZU_ROOM=ON \
 -DYUZU_ROOM_STANDALONE=OFF \
 -DUSE_DISCORD_PRESENCE=ON \
--DENABLE_QT_TRANSLATION=ON \
--DENABLE_UPDATE_CHECKER=ON \
+-DENABLE_QT_TRANSLATION=OFF \
+-DENABLE_UPDATE_CHECKER=OFF \
 -DCMAKE_BUILD_TYPE=Release \
--DCMAKE_C_COMPILER=clang \
--DCMAKE_CXX_COMPILER=clang++ \
+-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
 -DCMAKE_CXX_FLAGS="-march=znver2 -mtune=znver2 -pipe -fuse-ld=lld -fprofile-generate -w" \
 -DCMAKE_C_FLAGS="-march=znver2 -mtune=znver2 -pipe -fuse-ld=lld -fprofile-generate -w" \
 -DCMAKE_EXE_LINKER_FLAGS="-Wl,--as-needed" \
 -DCMAKE_SYSTEM_PROCESSOR=x86_64
-cmake --build build --parallel $(nproc)
+cmake --build build -j "$(nproc)"
 
 # workload run, each run with only one game
 cd build
