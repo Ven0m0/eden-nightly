@@ -1,10 +1,12 @@
 #!/bin/bash -e
+# shellcheck enable=all shell=bash source-path=SCRIPTDIR
+shopt -s nullglob globstar
+IFS=$'\n\t' LC_ALL=C
 
 echo "Making Eden for MacOS"
 export LIBVULKAN_PATH="/opt/homebrew/lib/libvulkan.1.dylib"
 
 cd ./eden
-
 # hook the updater to check my repo
 echo "-- Applying updater patch..."
 git apply ../patches/update.patch
