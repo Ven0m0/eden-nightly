@@ -1,0 +1,42 @@
+root = true
+
+[*]
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+indent_style = space
+indent_size = 2
+tab_width = 2
+max_line_length = 120
+spaces_around_operators = true
+spaces_around_brackets = false
+shell_variant = auto
+keep_padding = false
+space_redirects = false
+switch_case_indent = true
+function_next_line = false
+binary_next_line = true
+
+[*.bash*,bash_*,PKGBUILD,eden-*.sh,build.sh,merge.sh]
+shell_variant = bash
+
+[*.{bat,cmd,ps1,psm1}]
+indent_style = tab
+indent_size = 4
+end_of_line = crlf
+
+[*.{xml,html,htm}]
+indent_size = 4
+
+[*.{patch,diff}]
+trim_trailing_whitespace = false
+
+[*.{md,markdown}]
+max_line_length = 100
+trim_trailing_whitespace = false
+
+[**.{yml,yaml}]
+indent_style = space
+indent_size = 2
+max_line_length = 120
