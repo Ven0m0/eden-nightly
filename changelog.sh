@@ -1,9 +1,9 @@
 #!/bin/bash
-
-set -e
+# shellcheck enable=all shell=bash source-path=SCRIPTDIR
+set -e; shopt -s nullglob globstar
+IFS=$'\n\t' LC_ALL=C
 
 echo "-- Generating changelog for release..."
-
 echo "-- Cloning Eden repository..."
 git clone 'https://git.eden-emu.dev/eden-emu/eden.git' ./eden
 cd ./eden
