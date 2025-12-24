@@ -1,9 +1,11 @@
 #!/bin/bash -e
+# shellcheck enable=all shell=bash source-path=SCRIPTDIR
+shopt -s nullglob globstar
+IFS=$'\n\t' LC_ALL=C
 
 echo "-- Building Linux Appimage..."
 
-export APPIMAGE_EXTRACT_AND_RUN=1
-export ARCH="$(uname -m)"
+export APPIMAGE_EXTRACT_AND_RUN=1 ARCH="$(uname -m)"
 
 SHARUN="https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/refs/heads/main/useful-tools/quick-sharun.sh"
 URUNTIME="https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/refs/heads/main/useful-tools/uruntime2appimage.sh"
@@ -20,17 +22,14 @@ fi
 cd ./eden
 COUNT="$(git rev-list --count HEAD)"
 DATE="$(date +"%d_%m_%Y")"
-
 echo "-- Build Configuration:"
 echo "   Target: $TARGET"
 echo "   Optimization: $OPTIMIZE"
 echo "   Count: $COUNT"
-
 # hook the updater to check my repo
 echo "-- Applying updater patch..."
 git apply ../patches/update.patch
 echo "   Done."
-
 # Set Base CMake flags
 declare -a BASE_CMAKE_FLAGS=(
     "-DYUZU_USE_BUNDLED_QT=OFF"
@@ -87,7 +86,6 @@ case "$TARGET" in
             "-DYUZU_SYSTEM_PROFILE=steamdeck"
             "-DYUZU_USE_EXTERNAL_SDL2=ON"
         )
-
         if [[ "$OPTIMIZE" == "PGO" ]]; then
             EXTRA_CMAKE_FLAGS+=(
                 "-DCMAKE_C_COMPILER=clang"
@@ -137,7 +135,6 @@ case "$TARGET" in
             "-DYUZU_USE_EXTERNAL_SDL2=OFF"
             "-DYUZU_USE_BUNDLED_SDL2=ON"
         )
-
         if [[ "$OPTIMIZE" == "PGO" ]]; then
             EXTRA_CMAKE_FLAGS+=(
                 "-DCMAKE_C_COMPILER=clang"
@@ -170,70 +167,54 @@ case "$TARGET" in
         )
     ;;
 esac
-
 echo "-- Base CMake flags:"
 for flag in "${BASE_CMAKE_FLAGS[@]}"; do
     echo "   $flag"
 done
-
 echo "-- Extra CMake Flags:"
 for flag in "${EXTRA_CMAKE_FLAGS[@]}"; do
     echo "   $flag"
 done
-
 echo "-- Starting build..."
-mkdir build
-cd build
+mkdir build && cd build
 cmake .. -G Ninja "${BASE_CMAKE_FLAGS[@]}" "${EXTRA_CMAKE_FLAGS[@]}"
 ninja
 echo "-- Build Completed."
-
 if [[ "$OPTIMIZE" == "Normal" ]]; then
     echo "-- Sccache stats:"
     sccache -s
 fi
-
 # Use sharun to generate AppDir
 echo "-- Generating AppDir..."
 cd ..
 export ICON="$PWD"/dist/dev.eden_emu.eden.svg
 export DESKTOP="$PWD"/dist/dev.eden_emu.eden.desktop
-export OPTIMIZE_LAUNCH=1
-export DEPLOY_OPENGL=1
-export DEPLOY_VULKAN=1
-export DEPLOY_QT=1
+export OPTIMIZE_LAUNCH=1 DEPLOY_OPENGL=1 DEPLOY_VULKAN=1 DEPLOY_QT=1
 export OUTNAME="Eden-${COUNT}-${TARGET}-${OPTIMIZE}-${ARCH}.AppImage"
 
 wget -q --retry-connrefused --tries=30 "$SHARUN" -O ./quick-sharun
-chmod +x ./quick-sharun
-./quick-sharun ./build/bin/eden
+chmod +x ./quick-sharun && ./quick-sharun ./build/bin/eden
 echo 'QT_QPA_PLATFORM=xcb' >> AppDir/.env
-
 # Change desktop entry name to 'Eden Nightly'
 sed -i 's|Name=Eden|Name=Eden Nightly|' ./AppDir/*.desktop
-
 # Use uruntime to make appimage
 echo "-- Creating AppImage..."
 wget -q --retry-connrefused --tries=30 "$URUNTIME" -O ./uruntime2appimage
-chmod +x ./uruntime2appimage
-./uruntime2appimage
+chmod +x ./uruntime2appimage && ./uruntime2appimage
 
-mkdir -p appimage
-mv -v "${OUTNAME}" appimage/
+mkdir -p appimage && mv -v "${OUTNAME}" appimage/
 echo "-- AppImage created: appimage/${OUTNAME}"
 
 # Use pelf to make appbundle
 echo "-- Creating AppBundle..."
-wget -q --retry-connrefused --tries=30 "$PELF" -O ./pelf
-chmod +x ./pelf
+wget -q --retry-connrefused --tries=30 "$PELF" -O ./pelf && chmod +x ./pelf
 
 APPBUNDLE="Eden-${COUNT}-${TARGET}-${OPTIMIZE}-${ARCH}.dwfs.AppBundle"
 ln -sfv ./AppDir/eden.svg ./AppDir/.DirIcon.svg
 cp -v ../io.github.eden_emu.Eden.appdata.xml ./AppDir
 ./pelf --add-appdir ./AppDir --appbundle-id="Eden-${DATE}-Escary" --compression "-C zstd:level=22 -S26 -B6" --output-to "$APPBUNDLE"
 
-mkdir -p appbundle
-mv -v "${APPBUNDLE}"* appbundle/
+mkdir -p appbundle && mv -v "${APPBUNDLE}"* appbundle/
 echo "-- AppBundle created: appbundle/${APPBUNDLE}"
 
 echo "=== ALL DONE! ==="
