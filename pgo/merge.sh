@@ -1,5 +1,9 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+# shellcheck enable=all shell=bash source-path=SCRIPTDIR
+set -e; shopt -s nullglob globstar
+IFS=$'\n\t' LC_ALL=C
+
+command -v llvm-profdata &>/dev/null || exit 1
 
 echo "-- Generating merged PGO profile data..."
 
@@ -11,7 +15,6 @@ for archive in ./*.7z; do
     version=$(basename "$archive" .7z)
     temp=$(mktemp -d)
     7z x "$archive" -o"$temp" -y &>/dev/null
-    
     echo "-- Merging profraw files for version: $version"
     llvm-profdata merge "$temp"/*.profraw -o "$temp/$version.profdata" 2>/dev/null || {
       # windows llvm can't handle zlib compressed profraw files
@@ -30,11 +33,9 @@ versions=()
 
 for file in ./*.profdata; do
     version=$(basename "$file" .profdata)
-    
     echo "-- Full profile version output for $version:"
     llvm-profdata show --profile-version "$file"
     profile_version=$(llvm-profdata show --profile-version "$file" | tail -1 | grep -o '[0-9]\+$')
-    
     if [ -n "$profile_version" ]; then
         # update latest version
         if [ -z "$latest_version" ] || [ "$profile_version" -gt "$latest_version" ]; then
@@ -69,7 +70,6 @@ for i in "${!sorted_versions[@]}"; do
     merge_args+=( "--weighted-input=$weight,./$version.profdata" )
     echo "  $version.profdata -> weight: $weight"
 done
-
 llvm-profdata merge "${merge_args[@]}" -o "$OUTPUT"
 
 echo "-- Final merged profdata: $OUTPUT"
