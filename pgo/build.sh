@@ -1,7 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# shellcheck enable=all shell=bash source-path=SCRIPTDIR
+shopt -s nullglob globstar
+IFS=$'\n\t' LC_ALL=C
+
+command -v cmake &>/dev/null || exit 1
+command -v llvm-profdata &>/dev/null || exit 1
 
 cd eden
-
 cmake --fresh -G Ninja -S . -B build \
 -DYUZU_USE_BUNDLED_QT=OFF \
 -DYUZU_USE_BUNDLED_FFMPEG=ON \
