@@ -1,4 +1,7 @@
 #!/bin/bash -e
+# shellcheck enable=all shell=bash source-path=SCRIPTDIR
+shopt -s nullglob globstar
+IFS=$'\n\t' LC_ALL=C
 
 echo "-- Building Eden for Windows..."
 
