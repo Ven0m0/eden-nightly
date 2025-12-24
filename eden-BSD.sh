@@ -11,7 +11,13 @@ COUNT="$(git rev-list --count HEAD)"
 declare -a EXTRA_CMAKE_FLAGS=()
 if [ "$TARGET" = "Solaris" ]; then
     git apply ../patches/solaris.patch
-    
+
+    # Optimize PNG assets
+    echo "-- Optimizing PNG assets..."
+    chmod +x ../optimize-assets.sh
+    ../optimize-assets.sh || echo "   Warning: optimize-assets.sh failed or optipng not available"
+    echo "   Done."
+
     export PKG_CONFIG_PATH=/usr/lib/64/pkgconfig:/usr/lib/pkgconfig
     export PATH="/usr/local/bin:$PATH"
 
@@ -28,6 +34,12 @@ if [ "$TARGET" = "Solaris" ]; then
 elif [ "$TARGET" = "FreeBSD" ]; then
     # hook the updater to check my repo
     git apply ../patches/update.patch
+
+    # Optimize PNG assets
+    echo "-- Optimizing PNG assets..."
+    chmod +x ../optimize-assets.sh
+    ../optimize-assets.sh || echo "   Warning: optimize-assets.sh failed or optipng not available"
+    echo "   Done."
 
     export CC=clang20
     export CXX=clang++20

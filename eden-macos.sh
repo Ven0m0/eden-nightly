@@ -12,6 +12,12 @@ echo "-- Applying updater patch..."
 git apply ../patches/update.patch
 echo "   Done."
 
+# Optimize PNG assets
+echo "-- Optimizing PNG assets..."
+chmod +x ../optimize-assets.sh
+../optimize-assets.sh || echo "   Warning: optimize-assets.sh failed or optipng not available"
+echo "   Done."
+
 COUNT="$(git rev-list --count HEAD)"
 APP_NAME="Eden-${COUNT}-MacOS-${TARGET}"
 echo "-- Build Configuration:"

@@ -35,6 +35,18 @@ if [ "$TARGET" = "ChromeOS" ]; then
 	echo "   Done."
 fi
 
+# Optimize unused strings
+echo "-- Removing unused strings..."
+chmod +x ../unused-strings.sh
+../unused-strings.sh || echo "   Warning: unused-strings.sh failed or no unused strings found"
+echo "   Done."
+
+# Optimize PNG assets
+echo "-- Optimizing PNG assets..."
+chmod +x ../optimize-assets.sh
+../optimize-assets.sh || echo "   Warning: optimize-assets.sh failed or optipng not available"
+echo "   Done."
+
 # Set extra cmake flags
 CMAKE_FLAGS=(
     "-DCMAKE_C_COMPILER_LAUNCHER=sccache"
