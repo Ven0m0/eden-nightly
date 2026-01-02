@@ -1,13 +1,16 @@
 name: Build
-run-name: Build ${{ github.event.inputs.job_to_run || 'Auto Release' }}
+run-name: ${{ github.event.inputs.job_to_run && format('Build {0}', github.event.inputs.job_to_run) || github.event.pull_request.title ||'Auto Release' }}
 
 concurrency:
-  group: build-eden-${{ github.ref }}-${{ github.event.inputs.job_to_run || 'Auto Release' }}
+  group: build-eden-${{ github.ref }}-${{ github.event.inputs.job_to_run || github.event_name }}
   cancel-in-progress: true
 
 on:
   schedule:
     - cron: '0 0 * * *'
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       job_to_run:
@@ -20,6 +23,7 @@ jobs:
   info:
     if: |
       github.event_name == 'schedule' ||
+      github.event_name == 'pull_request' ||
       github.event.inputs.job_to_run == 'release' ||
       github.event.inputs.job_to_run == 'info'
     runs-on: ubuntu-latest
@@ -36,8 +40,12 @@ jobs:
         env:
           GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
+          GH_AUTH_HEADER=""
+          if [ -n "$GH_TOKEN" ]; then
+            GH_AUTH_HEADER="Authorization: token $GH_TOKEN"
+          fi
           api_url="https://api.github.com/repos/${{ github.repository }}"
-          latest_release_info=$(curl -H "Authorization: token $GH_TOKEN" "$api_url/releases/latest")
+          latest_release_info=$(curl -H "$GH_AUTH_HEADER" "$api_url/releases/latest")
           last_release_tag=$(echo "$latest_release_info" | jq -r '.tag_name')
           echo "${last_release_tag}"
           old_count="${last_release_tag##*-}"
@@ -57,7 +65,10 @@ jobs:
           echo "   Previous Release Count: $OLD_COUNT"
           echo "   Current Source Count:  $NEW_COUNT"
 
-          if [ "$NEW_COUNT" = "$OLD_COUNT" ]; then
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "-- Pull request detected, proceeding with the build."
+            echo "should_skip=false" >> "$GITHUB_OUTPUT"
+          elif [ "$NEW_COUNT" = "$OLD_COUNT" ]; then
             echo "should_skip=true" >> "$GITHUB_OUTPUT"
             echo "-- [SKIP] No changes detected. Current version is up to date."
           else
@@ -79,6 +90,7 @@ jobs:
     if: |
       !cancelled() && (
         (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        github.event_name == 'pull_request' ||
         (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
         (github.event.inputs.job_to_run == 'source')
       )
@@ -108,6 +120,7 @@ jobs:
     if: |
       !cancelled() && (
         (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        github.event_name == 'pull_request' ||
         (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
         (github.event.inputs.job_to_run == 'appimage')
       )
@@ -193,6 +206,7 @@ jobs:
     if: |
       !cancelled() && (
         (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        github.event_name == 'pull_request' ||
         (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
         (github.event.inputs.job_to_run == 'android')
       )
@@ -238,6 +252,7 @@ jobs:
     if: |
       !cancelled() && (
         (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        github.event_name == 'pull_request' ||
         (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
         (github.event.inputs.job_to_run == 'windows')
       )
@@ -369,6 +384,7 @@ jobs:
     if: |
       !cancelled() && (
         (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        github.event_name == 'pull_request' ||
         (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
         (github.event.inputs.job_to_run == 'macos')
       )
@@ -420,6 +436,7 @@ jobs:
     if: |
       !cancelled() && (
         (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        github.event_name == 'pull_request' ||
         (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
         (github.event.inputs.job_to_run == 'bsd')
       )
