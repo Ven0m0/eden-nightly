@@ -13,7 +13,7 @@ on:
       job_to_run:
         type: choice
         description: 'Choose target build platform'
-        options: [release, windows, appimage, macos, android, bsd, info]
+        options: [release, info, source, appimage, android, windows, macos, bsd]
         default: 'release'
 
 jobs:
@@ -23,10 +23,10 @@ jobs:
       github.event.inputs.job_to_run == 'release' ||
       github.event.inputs.job_to_run == 'info'
     runs-on: ubuntu-latest
-    name: "Changelog"
-    strategy:
-      matrix:
-        target: [Info]
+    name: "Info"
+    outputs:
+      should_skip: ${{ steps.compare_count.outputs.should_skip }}
+
     steps:
       - uses: actions/checkout@v6.0.1
         with:
@@ -48,23 +48,54 @@ jobs:
           chmod +x ./changelog.sh
           ./changelog.sh
 
-      - name: Upload tag file
-        uses: actions/upload-artifact@v6.0.0
-        with:
-          name: tag
-          path: ~/tag
+      - name: Compare Count
+        id: compare_count
+        run: |
+          NEW_COUNT=$(cat ~/count)
 
-      - name: Upload count file
-        uses: actions/upload-artifact@v6.0.0
-        with:
-          name: count
-          path: ~/count
+          echo "-- Release Count Check:"
+          echo "   Previous Release Count: $OLD_COUNT"
+          echo "   Current Source Count:  $NEW_COUNT"
 
-      - name: Upload changelog file
+          if [ "$NEW_COUNT" = "$OLD_COUNT" ]; then
+            echo "should_skip=true" >> "$GITHUB_OUTPUT"
+            echo "-- [SKIP] No changes detected. Current version is up to date."
+          else
+            echo "should_skip=false" >> "$GITHUB_OUTPUT"
+            echo "-- [PROCEED] New changes detected. Starting release process."
+          fi
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v6.0.0
         with:
-          name: changelog
-          path: ~/changelog
+          name: info-artifacts
+          path: |
+            ~/tag
+            ~/count
+            ~/changelog
+
+  source:
+    needs: [info]
+    if: |
+      !cancelled() && (
+        (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'source')
+      )
+    runs-on: ubuntu-latest
+    name: "Source"
+    strategy:
+      matrix:
+        target: [Source]
+    steps:
+      - uses: actions/checkout@v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Pack source code
+        run: |
+          chmod +x ./source.sh
+          ./source.sh
 
       - name: Upload source code
         uses: actions/upload-artifact@v6.0.0
@@ -73,10 +104,13 @@ jobs:
           path: artifacts
 
   appimage:
+    needs: [info]
     if: |
-      github.event_name == 'schedule' ||
-      github.event.inputs.job_to_run == 'release' ||
-      github.event.inputs.job_to_run == 'appimage'
+      !cancelled() && (
+        (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'appimage')
+      )
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
@@ -155,10 +189,13 @@ jobs:
           path: eden/appbundle
 
   android:
+    needs: [info]
     if: |
-      github.event_name == 'schedule' ||
-      github.event.inputs.job_to_run == 'release' || 
-      github.event.inputs.job_to_run == 'android'
+      !cancelled() && (
+        (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'android')
+      )
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -197,10 +234,13 @@ jobs:
           path: eden/src/android/artifacts/
 
   windows:
+    needs: [info]
     if: |
-      github.event_name == 'schedule' ||
-      github.event.inputs.job_to_run == 'release' ||
-      github.event.inputs.job_to_run == 'windows'
+      !cancelled() && (
+        (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'windows')
+      )
     runs-on: ${{ matrix.runs-on }}
     name: "Windows ${{ matrix.toolchain }} ${{ matrix.optimize }} (${{ matrix.arch }})"
     strategy:
@@ -325,10 +365,13 @@ jobs:
           path: installer/artifacts/
 
   macos:
+    needs: [info]
     if: |
-      github.event_name == 'schedule' ||
-      github.event.inputs.job_to_run == 'release' ||
-      github.event.inputs.job_to_run == 'macos'
+      !cancelled() && (
+        (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'macos')
+      )
     runs-on: macos-latest
     name: "MacOS (${{ matrix.target }})"
     strategy:
@@ -373,10 +416,13 @@ jobs:
           path: eden/build/artifacts/
 
   bsd:
+    needs: [info]
     if: |
-      github.event_name == 'schedule' ||
-      github.event.inputs.job_to_run == 'release' ||
-      github.event.inputs.job_to_run == 'bsd'
+      !cancelled() && (
+        (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'bsd')
+      )
     name: ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
@@ -440,11 +486,12 @@ jobs:
           path: eden/build/artifacts/
 
   release:
+    needs: [info, source, appimage, android, windows, macos, bsd]
     if: |
       github.ref_name == 'main' && 
-      (github.event_name == 'schedule' || github.event.inputs.job_to_run == 'release')
-    name: "release"
-    needs: [info, appimage, windows, macos, android, bsd]
+      (github.event_name == 'schedule' || github.event.inputs.job_to_run == 'release') && 
+      needs.info.outputs.should_skip != 'true'
+    name: "Release"
     permissions:
       actions: read
       security-events: write
