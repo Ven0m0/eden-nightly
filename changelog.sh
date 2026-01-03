@@ -24,7 +24,7 @@ echo "   Commit count: $COUNT"
 CHANGELOG_FILE=~/changelog
 BASE_COMMIT_URL="https://git.eden-emu.dev/eden-emu/eden/commit"
 BASE_COMPARE_URL="https://git.eden-emu.dev/eden-emu/eden/compare"
-BASE_DOWNLOAD_URL="https://github.com/pflyly/eden-nightly/releases/download"
+BASE_DOWNLOAD_URL="https://github.com/${GH_REPO}/releases/download"
 
 # Fallback if OLD_COUNT is empty or null
 echo "-- Checking previous release count..."

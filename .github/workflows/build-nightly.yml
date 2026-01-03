@@ -30,21 +30,21 @@ jobs:
     name: "Info"
     outputs:
       should_skip: ${{ steps.compare_count.outputs.should_skip }}
-
+    env:
+      GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+      GH_REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v6.0.1
         with:
           persist-credentials: false
 
       - name: Get the latest release count
-        env:
-          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
           GH_AUTH_HEADER=""
           if [ -n "$GH_TOKEN" ]; then
             GH_AUTH_HEADER="Authorization: token $GH_TOKEN"
           fi
-          api_url="https://api.github.com/repos/${{ github.repository }}"
+          api_url="https://api.github.com/repos/$GH_REPO"
           latest_release_info=$(curl -H "$GH_AUTH_HEADER" "$api_url/releases/latest")
           last_release_tag=$(echo "$latest_release_info" | jq -r '.tag_name')
           echo "${last_release_tag}"
