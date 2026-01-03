@@ -176,7 +176,7 @@ jobs:
 
       - name: Install sccache
         if: ${{ matrix.optimize == 'Normal' }}
-        uses: Eden-CI/sccache-action@v0.0.1
+        uses: Eden-CI/sccache-action@v0.0.2
         with:
           disable_annotations: true
 
@@ -228,7 +228,7 @@ jobs:
           sudo apt-get install glslang-tools libvulkan-dev python3-requests -y
 
       - name: Install sccache
-        uses: Eden-CI/sccache-action@v0.0.1
+        uses: Eden-CI/sccache-action@v0.0.2
         with:
           disable_annotations: true
 
@@ -331,7 +331,7 @@ jobs:
 
       - name: Install sccache
         if: ${{ matrix.optimize == 'normal' }}
-        uses: Eden-CI/sccache-action@v0.0.1
+        uses: Eden-CI/sccache-action@v0.0.2
         with:
           disable_annotations: true
 
@@ -408,7 +408,7 @@ jobs:
           brew install --formula --quiet autoconf automake boost sccache glslang hidapi libiconv libtool mbedtls nasm speexdsp vulkan-loader vulkan-headers vulkan-utility-libraries molten-vk
 
       - name: Install sccache
-        uses: Eden-CI/sccache-action@v0.0.1
+        uses: Eden-CI/sccache-action@v0.0.2
         with:
           disable_annotations: true
 
