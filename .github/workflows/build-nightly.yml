@@ -1,45 +1,51 @@
 name: Build
-run-name: Build ${{ github.event.inputs.job_to_run }}
+run-name: ${{ github.event.inputs.job_to_run && format('Build {0}', github.event.inputs.job_to_run) || github.event.pull_request.title ||'Auto Release' }}
 
 concurrency:
-  group: build-eden-${{ github.ref }}-${{ github.event.inputs.job_to_run || 'all' }}
+  group: build-eden-${{ github.ref }}-${{ github.event.inputs.job_to_run || github.event_name }}
   cancel-in-progress: true
 
 on:
+  schedule:
+    - cron: '0 0 * * *'
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       job_to_run:
         type: choice
         description: 'Choose target build platform'
-        options:
-          - all
-          - windows
-          - appimage
-          - macos
-          - android
-          - bsd
-          - info
-        default: 'all'
+        options: [release, info, source, appimage, android, windows, macos, bsd]
+        default: 'release'
 
 jobs:
   info:
-    if: github.event.inputs.job_to_run == 'all' || github.event.inputs.job_to_run == 'info'
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'pull_request' ||
+      github.event.inputs.job_to_run == 'release' ||
+      github.event.inputs.job_to_run == 'info'
     runs-on: ubuntu-latest
-    name: "Changelog"
-    strategy:
-      matrix:
-        target: [Info]
+    name: "Info"
+    outputs:
+      should_skip: ${{ steps.compare_count.outputs.should_skip }}
+    env:
+      GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+      GH_REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v6.0.1
         with:
           persist-credentials: false
 
       - name: Get the latest release count
-        env:
-          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
-          api_url="https://api.github.com/repos/${{ github.repository }}"
-          latest_release_info=$(curl -H "Authorization: token $GH_TOKEN" "$api_url/releases/latest")
+          GH_AUTH_HEADER=""
+          if [ -n "$GH_TOKEN" ]; then
+            GH_AUTH_HEADER="Authorization: token $GH_TOKEN"
+          fi
+          api_url="https://api.github.com/repos/$GH_REPO"
+          latest_release_info=$(curl -H "$GH_AUTH_HEADER" "$api_url/releases/latest")
           last_release_tag=$(echo "$latest_release_info" | jq -r '.tag_name')
           echo "${last_release_tag}"
           old_count="${last_release_tag##*-}"
@@ -50,23 +56,59 @@ jobs:
           chmod +x ./changelog.sh
           ./changelog.sh
 
-      - name: Upload tag file
-        uses: actions/upload-artifact@v6.0.0
-        with:
-          name: tag
-          path: ~/tag
+      - name: Compare Count
+        id: compare_count
+        run: |
+          NEW_COUNT=$(cat ~/count)
 
-      - name: Upload count file
-        uses: actions/upload-artifact@v6.0.0
-        with:
-          name: count
-          path: ~/count
+          echo "-- Release Count Check:"
+          echo "   Previous Release Count: $OLD_COUNT"
+          echo "   Current Source Count:  $NEW_COUNT"
 
-      - name: Upload changelog file
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "-- Pull request detected, proceeding with the build."
+            echo "should_skip=false" >> "$GITHUB_OUTPUT"
+          elif [ "$NEW_COUNT" = "$OLD_COUNT" ]; then
+            echo "::notice title=Build Skipped::No new commits detected (Current count: $NEW_COUNT). Skipping downstream jobs."
+            echo "should_skip=true" >> "$GITHUB_OUTPUT"
+            echo "-- [SKIP] No changes detected. Current version is up to date."
+          else
+            echo "should_skip=false" >> "$GITHUB_OUTPUT"
+            echo "-- [PROCEED] New changes detected. Starting release process."
+          fi
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v6.0.0
         with:
-          name: changelog
-          path: ~/changelog
+          name: info-artifacts
+          path: |
+            ~/tag
+            ~/count
+            ~/changelog
+
+  source:
+    needs: [info]
+    if: |
+      !cancelled() && (
+        (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        github.event_name == 'pull_request' ||
+        (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'source')
+      )
+    runs-on: ubuntu-latest
+    name: "Source"
+    strategy:
+      matrix:
+        target: [Source]
+    steps:
+      - uses: actions/checkout@v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Pack source code
+        run: |
+          chmod +x ./source.sh
+          ./source.sh
 
       - name: Upload source code
         uses: actions/upload-artifact@v6.0.0
@@ -75,7 +117,14 @@ jobs:
           path: artifacts
 
   appimage:
-    if: github.event.inputs.job_to_run == 'all' || github.event.inputs.job_to_run == 'appimage'
+    needs: [info]
+    if: |
+      !cancelled() && (
+        (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        github.event_name == 'pull_request' ||
+        (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'appimage')
+      )
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
@@ -128,7 +177,7 @@ jobs:
 
       - name: Install sccache
         if: ${{ matrix.optimize == 'Normal' }}
-        uses: Eden-CI/sccache-action@v0.0.1
+        uses: Eden-CI/sccache-action@v0.0.2
         with:
           disable_annotations: true
 
@@ -154,7 +203,14 @@ jobs:
           path: eden/appbundle
 
   android:
-    if: github.event.inputs.job_to_run == 'all' || github.event.inputs.job_to_run == 'android'
+    needs: [info]
+    if: |
+      !cancelled() && (
+        (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        github.event_name == 'pull_request' ||
+        (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'android')
+      )
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -173,7 +229,7 @@ jobs:
           sudo apt-get install glslang-tools libvulkan-dev python3-requests -y
 
       - name: Install sccache
-        uses: Eden-CI/sccache-action@v0.0.1
+        uses: Eden-CI/sccache-action@v0.0.2
         with:
           disable_annotations: true
 
@@ -193,7 +249,14 @@ jobs:
           path: eden/src/android/artifacts/
 
   windows:
-    if: github.event.inputs.job_to_run == 'all' || github.event.inputs.job_to_run == 'windows'
+    needs: [info]
+    if: |
+      !cancelled() && (
+        (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        github.event_name == 'pull_request' ||
+        (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'windows')
+      )
     runs-on: ${{ matrix.runs-on }}
     name: "Windows ${{ matrix.toolchain }} ${{ matrix.optimize }} (${{ matrix.arch }})"
     strategy:
@@ -269,7 +332,7 @@ jobs:
 
       - name: Install sccache
         if: ${{ matrix.optimize == 'normal' }}
-        uses: Eden-CI/sccache-action@v0.0.1
+        uses: Eden-CI/sccache-action@v0.0.2
         with:
           disable_annotations: true
 
@@ -318,7 +381,14 @@ jobs:
           path: installer/artifacts/
 
   macos:
-    if: github.event.inputs.job_to_run == 'all' || github.event.inputs.job_to_run == 'macos'
+    needs: [info]
+    if: |
+      !cancelled() && (
+        (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        github.event_name == 'pull_request' ||
+        (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'macos')
+      )
     runs-on: macos-latest
     name: "MacOS (${{ matrix.target }})"
     strategy:
@@ -339,7 +409,7 @@ jobs:
           brew install --formula --quiet autoconf automake boost sccache glslang hidapi libiconv libtool mbedtls nasm speexdsp vulkan-loader vulkan-headers vulkan-utility-libraries molten-vk
 
       - name: Install sccache
-        uses: Eden-CI/sccache-action@v0.0.1
+        uses: Eden-CI/sccache-action@v0.0.2
         with:
           disable_annotations: true
 
@@ -363,7 +433,14 @@ jobs:
           path: eden/build/artifacts/
 
   bsd:
-    if: github.event.inputs.job_to_run == 'all' || github.event.inputs.job_to_run == 'bsd'
+    needs: [info]
+    if: |
+      !cancelled() && (
+        (github.event_name == 'schedule' && needs.info.outputs.should_skip != 'true') ||
+        github.event_name == 'pull_request' ||
+        (github.event.inputs.job_to_run == 'release' && needs.info.outputs.should_skip != 'true') ||
+        (github.event.inputs.job_to_run == 'bsd')
+      )
     name: ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
@@ -427,9 +504,12 @@ jobs:
           path: eden/build/artifacts/
 
   release:
-    if: github.ref_name == 'main' && github.event.inputs.job_to_run == 'all'
-    name: "release"
-    needs: [info, appimage, windows, macos, android, bsd]
+    needs: [info, source, appimage, android, windows, macos, bsd]
+    if: |
+      github.ref_name == 'main' && 
+      (github.event_name == 'schedule' || github.event.inputs.job_to_run == 'release') && 
+      needs.info.outputs.should_skip != 'true'
+    name: "Release"
     permissions:
       actions: read
       security-events: write
